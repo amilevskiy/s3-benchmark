@@ -1,0 +1,19 @@
+#!/bin/bash
+
+BUCKET_NAME=?
+
+yum --assumeyes install jq
+
+mkdir --parent /usr/local/bin
+
+# download and install the test program
+curl --silent --location --output - $( \
+  curl --silent https://api.github.com/repos/amilevskiy/s3-benchmark/releases/latest | \
+  jq --join-output ".assets[] | .browser_download_url | select(contains(\"$(uname -s)_$(uname -m).tar\"))") | \
+  tar --directory /usr/local/bin --no-same-owner --xz --extract --file=- s3-benchmark
+
+# run the exhaustive test 1 KB to 16 MB, and 1 to 48 threads; upload the csv results to S3
+/usr/local/bin/s3-benchmark -full -bucket-name="${BUCKET_NAME}" -upload-csv=csv
+
+# shutdown to terminate the instance after the test is complete
+shutdown
